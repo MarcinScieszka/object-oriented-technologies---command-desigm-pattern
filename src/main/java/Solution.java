@@ -9,6 +9,7 @@
 // 4) Client
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Scanner;
 
 // 4) Client
@@ -29,7 +30,6 @@ public class Solution {
             String userInput = scanner.nextLine();
             String[] userInputSplit = userInput.split(" ");
 
-//            System.out.println(userInput.charAt(0));
             char userCommandName = userInput.charAt(0);
 
             if (userCommandName == 'C') {
@@ -64,21 +64,23 @@ public class Solution {
                 }
             }
             else if (userCommandName == 'U') {
-                continue;
+                SquareInvoker squareUndoInvoker = new SquareInvoker(SquareInvoker.undoStore.getLast());
+                squareUndoInvoker.undo();
             }
             else if (userCommandName == 'R') {
-                continue;
+                SquareInvoker squareUndoInvoker = new SquareInvoker(SquareInvoker.redoStore.getLast());
+                squareUndoInvoker.redo();
             }
             else if (userCommandName == 'P') {
                 SquarePrint squarePrint = new SquarePrint(squares);
                 SquareInvoker squarePrintInvoker = new SquareInvoker(squarePrint);
                 squarePrintInvoker.execute();
+
+                squarePrintInvoker.printUndoCommands();
+                squarePrintInvoker.printRedoCommands();
             }
         }
     }
-
-//        scaleInvoker.printCommands();
-
 
     public static void storeSquare(Square square) {
         squares.add(square);
@@ -261,27 +263,39 @@ class SquarePrint implements Command {
 class SquareInvoker {
 
     Command command;
-    static ArrayList<Command> usedCommands = new ArrayList<>();
+    static LinkedList<Command> undoStore = new LinkedList<>();
+    static LinkedList<Command> redoStore = new LinkedList<>();
 
     SquareInvoker(Command command) {
         this.command = command;
     }
 
     public void execute() {
-        usedCommands.add(command);
+        if ((command instanceof SquareCreate) || (command instanceof SquareMove) || (command instanceof SquareScale)) {
+            undoStore.add(command);
+            redoStore.clear();
+        }
         this.command.execute();
     }
 
     public void undo() {
-        this.command.undo();
-        usedCommands.remove(command);
+        if ((command instanceof SquareCreate) || (command instanceof SquareMove) || (command instanceof SquareScale)) {
+            undoStore.remove(command);
+            redoStore.add(command);
+            this.command.undo();
+        }
     }
 
     public void redo() {
-        this.execute();
+        if ((command instanceof SquareCreate) || (command instanceof SquareMove) || (command instanceof SquareScale)) {
+            undoStore.add(command);
+            redoStore.remove(command);
+            this.command.redo();
+        }
     }
 
-    public void printCommands() {
-        System.out.println(usedCommands);
+    public void printUndoCommands() {
+        System.out.println(undoStore);
     }
+    public void printRedoCommands() { System.out.println(redoStore); }
 }
