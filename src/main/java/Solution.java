@@ -64,12 +64,16 @@ public class Solution {
                 }
             }
             else if (userCommandName == 'U') {
-                SquareInvoker squareUndoInvoker = new SquareInvoker(SquareInvoker.undoStore.getLast());
-                squareUndoInvoker.undo();
+                if (!SquareInvoker.undoStore.isEmpty()) {
+                    SquareInvoker squareUndoInvoker = new SquareInvoker(SquareInvoker.undoStore.getLast());
+                    squareUndoInvoker.undo();
+                }
             }
             else if (userCommandName == 'R') {
-                SquareInvoker squareUndoInvoker = new SquareInvoker(SquareInvoker.redoStore.getLast());
-                squareUndoInvoker.redo();
+                if (!SquareInvoker.undoStore.isEmpty()) {
+                    SquareInvoker squareUndoInvoker = new SquareInvoker(SquareInvoker.redoStore.getLast());
+                    squareUndoInvoker.redo();
+                }
             }
             else if (userCommandName == 'P') {
                 SquarePrint squarePrint = new SquarePrint(squares);
@@ -165,14 +169,12 @@ class SquareCreate implements Command{
     @Override
     public void execute() {
         square = new Square(this.id, this.edgeLength);
-//        System.out.println("Created " + square);
         Solution.storeSquare(square);
     }
 
     @Override
     public void undo() {
         Solution.unstoreSquare(square);
-//        System.out.println("Destroyed square" + square);
         square = null;
     }
 
@@ -294,8 +296,6 @@ class SquareInvoker {
         }
     }
 
-    public void printUndoCommands() {
-        System.out.println(undoStore);
-    }
+    public void printUndoCommands() { System.out.println(undoStore); }
     public void printRedoCommands() { System.out.println(redoStore); }
 }
