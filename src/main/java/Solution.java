@@ -9,20 +9,99 @@
 // 4) Client
 
 import java.util.ArrayList;
+import java.util.Scanner;
 
+// 4) Client
 public class Solution {
+    static ArrayList<Square> squares = new ArrayList<>();
+
     public static void main(String[] args) {
-        SquareInvoker invoker = new SquareInvoker();
 
-        SquareCreate squareCreate = new SquareCreate(1, 2);
-        invoker.storeAndExecute(squareCreate);
+        Scanner scanner = new Scanner(System.in);
 
-//        SquareMove squareMove = new SquareMove();
-//        SquarePrint squarePrint = new SquarePrint();
-//        squarePrint.execute();
+        while (true) {
+            int squareId;
+            int squareEdgeLength;
+            int pixelsToMoveRight;
+            int pixelsToMoveUp;
+            int scaleMultiplier;
+            int index;
+            String userInput = scanner.nextLine();
+            String[] userInputSplit = userInput.split(" ");
+
+//            System.out.println(userInput.charAt(0));
+            char userCommandName = userInput.charAt(0);
+
+            if (userCommandName == 'C') {
+                squareId = Integer.parseInt(userInputSplit[1]);
+                squareEdgeLength = Integer.parseInt(userInputSplit[2]);
+
+                SquareCreate squareCreate = new SquareCreate(squareId, squareEdgeLength);
+                SquareInvoker squareCreateInvoker = new SquareInvoker(squareCreate);
+                squareCreateInvoker.execute();
+            }
+            else if (userCommandName == 'M') {
+                squareId = Integer.parseInt(userInputSplit[1]);
+                pixelsToMoveRight = Integer.parseInt(userInputSplit[2]);
+                pixelsToMoveUp = Integer.parseInt(userInputSplit[3]);
+
+                index = findSquareById(squareId);
+                if (index >= 0) {
+                    SquareMove squareMove = new SquareMove(squares.get(index), pixelsToMoveRight, pixelsToMoveUp);
+                    SquareInvoker squareMoveInvoker = new SquareInvoker(squareMove);
+                    squareMoveInvoker.execute();
+                }
+            }
+            else if (userCommandName == 'S') {
+                squareId = Integer.parseInt(userInputSplit[1]);
+                scaleMultiplier = Integer.parseInt(userInputSplit[2]);
+
+                index = findSquareById(squareId);
+                if (index >= 0) {
+                    SquareScale squareScale = new SquareScale(squares.get(index), scaleMultiplier);
+                    SquareInvoker scaleInvoker = new SquareInvoker(squareScale);
+                    scaleInvoker.execute();
+                }
+            }
+            else if (userCommandName == 'U') {
+                continue;
+            }
+            else if (userCommandName == 'R') {
+                continue;
+            }
+            else if (userCommandName == 'P') {
+                SquarePrint squarePrint = new SquarePrint(squares);
+                SquareInvoker squarePrintInvoker = new SquareInvoker(squarePrint);
+                squarePrintInvoker.execute();
+            }
+        }
+    }
+
+//        scaleInvoker.printCommands();
+
+
+    public static void storeSquare(Square square) {
+        squares.add(square);
+    }
+
+    public static void unstoreSquare(Square square) {
+        squares.remove(square);
+    }
+
+    public static int findSquareById(int squareId) {
+        int index = 0;
+
+        for (Square square : squares) {
+            if (square.getId() == squareId) {
+                return index;
+            }
+            index++;
+        }
+        return -1;
     }
 }
 
+// 2) Receiver
 class Square {
     int id;
     int edgeLength;
@@ -69,7 +148,7 @@ interface Command {
     void redo();
 }
 
-class SquareCreate implements Command {
+class SquareCreate implements Command{
 
     private final int id;
     private final int edgeLength;
@@ -84,12 +163,14 @@ class SquareCreate implements Command {
     @Override
     public void execute() {
         square = new Square(this.id, this.edgeLength);
-        System.out.println("Created " + square);
+//        System.out.println("Created " + square);
+        Solution.storeSquare(square);
     }
 
     @Override
     public void undo() {
-        System.out.println("Destroyed square" + square);
+        Solution.unstoreSquare(square);
+//        System.out.println("Destroyed square" + square);
         square = null;
     }
 
@@ -129,16 +210,44 @@ class SquareMove implements Command {
     }
 }
 
-class SquarePrint implements Command {
+class SquareScale implements Command {
 
     Square square;
+    int scaleMultiplier;
 
-    SquarePrint(Square square) {
+    SquareScale(Square square, int scaleMultiplier) {
         this.square = square;
+        this.scaleMultiplier = scaleMultiplier;
+    }
+
+    @Override
+    public void execute() {
+        square.setEdgeLength(square.getEdgeLength() * this.scaleMultiplier);
+    }
+
+    @Override
+    public void undo() {
+        square.setEdgeLength(square.getEdgeLength() / this.scaleMultiplier);
+    }
+
+    @Override
+    public void redo() {
+        this.execute();
+    }
+}
+
+class SquarePrint implements Command {
+
+    ArrayList<Square> squares;
+
+    SquarePrint(ArrayList<Square> squares) {
+        this.squares = squares;
     }
 
     public void execute () {
-        System.out.println(square.getId() + " " + square.getXPosition() + " " + square.getYPosition() + " " + square.getEdgeLength());
+        for (Square square : squares) {
+            System.out.println(square.getId() + " " + square.getXPosition() + " " + square.getYPosition() + " " + square.getEdgeLength());
+        }
     }
 
     @Override
@@ -148,12 +257,31 @@ class SquarePrint implements Command {
     public void redo() {}
 }
 
+// 4) Invoker
 class SquareInvoker {
-    public void storeAndExecute(Command command) {
-        ArrayList<Command> usedCommands = new ArrayList<>();
-        usedCommands.add(command);
-        command.execute();
 
-        System.out.println(usedCommands); //TODO: temp
+    Command command;
+    static ArrayList<Command> usedCommands = new ArrayList<>();
+
+    SquareInvoker(Command command) {
+        this.command = command;
+    }
+
+    public void execute() {
+        usedCommands.add(command);
+        this.command.execute();
+    }
+
+    public void undo() {
+        this.command.undo();
+        usedCommands.remove(command);
+    }
+
+    public void redo() {
+        this.execute();
+    }
+
+    public void printCommands() {
+        System.out.println(usedCommands);
     }
 }
